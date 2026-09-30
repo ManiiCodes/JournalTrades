@@ -3,6 +3,7 @@ services:
     name: orb-journal
     runtime: node
     plan: free
+    rootDir: orb-journal
     buildCommand: npm ci --omit=dev
     startCommand: npm start
     healthCheckPath: /healthz
@@ -10,7 +11,7 @@ services:
       - key: NODE_VERSION
         value: "22"
       - key: DATABASE_URL
-        sync: false          # paste your Neon connection string when Render asks
+        sync: false
       - key: APP_SECRET
         generateValue: true
       - key: ALLOW_SIGNUPS
