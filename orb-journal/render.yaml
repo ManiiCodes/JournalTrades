@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: orb-journal
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        sync: false          # paste your Neon connection string when Render asks
+      - key: APP_SECRET
+        generateValue: true
+      - key: ALLOW_SIGNUPS
+        value: "true"
+      - key: TRADOVATE_CLIENT_ID
+        sync: false
+      - key: TRADOVATE_CLIENT_SECRET
+        sync: false

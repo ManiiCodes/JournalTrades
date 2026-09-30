@@ -1,0 +1,19 @@
+{
+  "name": "orb-journal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ORB futures trade journal with sign-in and Tradovate sync",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/server.js",
+    "dev": "node --env-file-if-exists=.env --watch src/server.js"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "express": "^4.21.2",
+    "pg": "^8.23.1"
+  }
+}
