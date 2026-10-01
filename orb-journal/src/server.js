@@ -14,7 +14,7 @@ const SYNC_MINUTES = Math.max(5, Number(process.env.SYNC_MINUTES) || 15);
 const REDIRECT_URI = `${APP_URL}/api/tradovate/oauth/callback`;
 const SESSION_DAYS = 30;
 
-const DEFAULT_SETTINGS = { fees: { NQ: 0, MNQ: 0, ES: 0, MES: 0 }, defaultInstr: 'NQ', theme: '', timezone: 'America/Chicago' };
+const DEFAULT_SETTINGS = { fees: { NQ: 0, MNQ: 0, ES: 0, MES: 0 }, defaultInstr: 'NQ', theme: '', timezone: 'America/Chicago', targets: {} };
 const FIRMS = ['Tradeify', 'Lucid Trading', 'Purdia Capital', 'Tradovate (personal)', 'Other'];
 const KINDS = ['', 'Eval', 'Funded', 'Live'];
 
@@ -76,7 +76,7 @@ const wrap = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch
 async function getSettings(userId) {
   const row = await q.getSettings.get([userId]);
   const s = row ? JSON.parse(row.data) : {};
-  return { ...DEFAULT_SETTINGS, ...s, fees: { ...DEFAULT_SETTINGS.fees, ...(s.fees || {}) } };
+  return { ...DEFAULT_SETTINGS, ...s, fees: { ...DEFAULT_SETTINGS.fees, ...(s.fees || {}) }, targets: { ...(s.targets || {}) } };
 }
 function publicConnection(c) {
   return { id: c.id, method: c.method, env: c.env, label: c.label, status: c.status,
@@ -238,10 +238,14 @@ app.put('/api/settings', requireUser, wrap(async (req, res) => {
   const b = req.body || {}, cur = await getSettings(req.user.id);
   const fees = {};
   for (const [k, v] of Object.entries(b.fees || cur.fees)) if (/^[A-Z0-9]{1,6}$/.test(k)) fees[k] = Math.max(0, +v || 0);
+  const srcTargets = (b.targets && typeof b.targets === 'object') ? b.targets : (cur.targets || {});
+  const targets = {};
+  for (const [k, v] of Object.entries(srcTargets)) if (/^a_[A-Za-z0-9_-]{1,40}$/.test(k) && isFinite(+v)) targets[k] = Math.max(0, Math.min(1e7, +v));
   const next = {
     fees, defaultInstr: clip(b.defaultInstr || cur.defaultInstr, 10),
     theme: ['', 'light', 'dark'].includes(b.theme) ? b.theme : cur.theme,
     timezone: sec.validTz(b.timezone) ? b.timezone : cur.timezone,
+    targets,
   };
   await q.putSettings.run([req.user.id, JSON.stringify(next)]);
   res.json({ ok: true });
