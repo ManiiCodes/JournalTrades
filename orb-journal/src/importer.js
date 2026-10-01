@@ -23,7 +23,7 @@ const r2 = v => (v == null || !isFinite(v) ? 0 : Math.round(v * 100) / 100);
 
 function blankTradeData() {
   return { orh: null, orl: null, stop: null, target: null, c15: false, c5: false, c1: false, plan: false,
-    grade: '', mistakes: [], emotion: [], notes: '', link: '', reviewed: false };
+    grade: '', mistakes: [], emotion: [], emoEntry: [], emoDuring: [], emoExit: [], notes: '', link: '', reviewed: false };
 }
 
 /**

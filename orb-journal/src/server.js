@@ -159,11 +159,16 @@ app.get('/api/state', requireUser, wrap(async (req, res) => {
 }));
 
 // ---------- trades ----------
-const JOURNAL_FIELDS = t => ({
-  orh: numOrNull(t.orh), orl: numOrNull(t.orl), stop: numOrNull(t.stop), target: numOrNull(t.target),
-  c15: !!t.c15, c5: !!t.c5, c1: !!t.c1, plan: !!t.plan, grade: ['A', 'B', 'C'].includes(t.grade) ? t.grade : '',
-  mistakes: strList(t.mistakes), emotion: strList(t.emotion), notes: clip(t.notes, 5000), link: clip(t.link, 500),
-});
+const JOURNAL_FIELDS = t => {
+  const emoEntry = strList(t.emoEntry), emoDuring = strList(t.emoDuring), emoExit = strList(t.emoExit);
+  return {
+    orh: numOrNull(t.orh), orl: numOrNull(t.orl), stop: numOrNull(t.stop), target: numOrNull(t.target),
+    c15: !!t.c15, c5: !!t.c5, c1: !!t.c1, plan: !!t.plan, grade: ['A', 'B', 'C'].includes(t.grade) ? t.grade : '',
+    mistakes: strList(t.mistakes), emoEntry, emoDuring, emoExit,
+    emotion: [...new Set([...emoEntry, ...emoDuring, ...emoExit, ...strList(t.emotion)])].slice(0, 20),
+    notes: clip(t.notes, 5000), link: clip(t.link, 500),
+  };
+};
 const EXEC_FIELDS = t => ({
   date: /^\d{4}-\d{2}-\d{2}$/.test(t.date) ? t.date : null, time: /^\d{2}:\d{2}$/.test(t.time || '') ? t.time : '',
   instr: clip(t.instr, 10).toUpperCase() || 'NQ', side: t.side === 'short' ? 'short' : 'long',
