@@ -163,3 +163,24 @@ nav button[aria-selected="true"]{box-shadow:0 0 16px -5px var(--or)}
 .pc-foot b{display:block;font-size:14px;font-stretch:88%;color:var(--ink);margin-top:3px;text-transform:none;letter-spacing:0}
 .acct{grid-template-columns:1.4fr 1fr 1fr 1fr auto}
 @media (max-width:620px){.acct{grid-template-columns:1fr 1fr}}
+/* ---- game HUD background + rank avatars ---- */
+body{
+  background:
+    radial-gradient(1000px 520px at 12% -6%, color-mix(in srgb, var(--or) 14%, transparent), transparent 60%),
+    radial-gradient(880px 460px at 102% 0%, color-mix(in srgb, var(--gain) 10%, transparent), transparent 55%),
+    radial-gradient(720px 520px at 50% 120%, color-mix(in srgb, var(--loss) 7%, transparent), transparent 60%),
+    repeating-linear-gradient(0deg, transparent 0 39px, color-mix(in srgb, var(--ink) 4%, transparent) 39px 40px),
+    repeating-linear-gradient(90deg, transparent 0 39px, color-mix(in srgb, var(--ink) 4%, transparent) 39px 40px),
+    var(--paper);
+  background-attachment:fixed;
+}
+.pc-top{align-items:center}
+.pc-ava{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;overflow:hidden;padding:2px;background:radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--or) 18%, var(--field)), var(--field));border:1px solid var(--line);box-shadow:inset 0 0 14px -8px var(--or)}
+.pc-ava svg{width:100%;height:100%;display:block}
+.pcard.up .pc-ava{border-color:var(--gain);box-shadow:0 0 15px -4px var(--gain)}
+.pcard.down .pc-ava{border-color:var(--loss);box-shadow:0 0 15px -4px var(--loss)}
+.pcard.cleared .pc-ava{border-color:var(--or);box-shadow:0 0 18px -3px var(--or)}
+.pc-id{flex:1;min-width:0}
+.pcard.rank-legend .pc-ava,.pcard.rank-elite .pc-ava{animation:avapulse 1.9s ease-in-out infinite}
+@keyframes avapulse{0%,100%{box-shadow:0 0 10px -5px var(--or)}50%{box-shadow:0 0 22px -2px var(--or)}}
+@media (prefers-reduced-motion:reduce){.pc-ava{animation:none!important}}

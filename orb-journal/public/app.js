@@ -495,6 +495,24 @@ function acctStanding(acctId) {
 }
 const RANKS = [[5000, 'Legend'], [2500, 'Elite'], [1000, 'Veteran'], [500, 'Warrior'], [1, 'Fighter'], [-1e12, 'Rookie']];
 const rankOf = net => (RANKS.find(([t]) => net >= t) || RANKS[RANKS.length - 1])[1];
+function chibi(rank) {
+  const P = { Rookie: { h: '#7f8ea3' }, Fighter: { h: '#2f8f6b' }, Warrior: { h: '#c8880f' }, Veteran: { h: '#8a6cff' }, Elite: { h: '#ef5a52' }, Legend: { h: '#36c6ff' } }[rank] || { h: '#7f8ea3' };
+  const acc = {
+    Fighter: '<rect x="13" y="20.5" width="22" height="3" rx="1" fill="#e5484d"/>',
+    Warrior: '<rect x="14" y="19.5" width="20" height="3.2" rx="1" fill="#9aa6b5"/><rect x="22" y="19.5" width="4" height="3.2" fill="#cfd8e2"/>',
+    Veteran: '<path d="M14 15 L11 7.5 L18 13.5 Z" fill="#8a6cff"/><path d="M34 15 L37 7.5 L30 13.5 Z" fill="#8a6cff"/>',
+    Elite: '<path d="M24 3.5 C27.5 9 22 10 24.6 14 C29 11 31 13 29 17 C35.5 12 31 5 24 3.5 Z" fill="#ff8a3d"/>',
+    Legend: '<path d="M15 13 L15 8.5 L19.5 11 L24 7 L28.5 11 L33 8.5 L33 13 Z" fill="#ffd34d" stroke="#e0a800" stroke-width=".6" stroke-linejoin="round"/>',
+  }[rank] || '';
+  return '<svg viewBox="0 0 48 48" width="100%" height="100%" aria-hidden="true">'
+    + '<circle cx="24" cy="24" r="13.5" fill="' + P.h + '"/>'
+    + '<circle cx="24" cy="27.5" r="11" fill="#f3d3b5"/>'
+    + '<path d="M12.5 23 Q24 13 35.5 23 Q30 18.5 24 18.5 Q18 18.5 12.5 23 Z" fill="' + P.h + '"/>'
+    + '<ellipse cx="19.6" cy="28" rx="2" ry="2.8" fill="#20303f"/><ellipse cx="28.4" cy="28" rx="2" ry="2.8" fill="#20303f"/>'
+    + '<circle cx="20.3" cy="27.1" r=".65" fill="#fff"/><circle cx="29.1" cy="27.1" r=".65" fill="#fff"/>'
+    + '<path d="M21.8 33 Q24 34.8 26.2 33" stroke="#20303f" stroke-width="1" fill="none" stroke-linecap="round"/>'
+    + acc + '</svg>';
+}
 function standCard(a) {
   const s = acctStanding(a.id), net = s.net;
   const lvl = Math.max(1, Math.floor(Math.max(0, net) / 250) + 1);
@@ -503,9 +521,10 @@ function standCard(a) {
   if (tgt > 0) { pct = Math.max(0, Math.min(100, net / tgt * 100)); label = `${money(net)} / ${money(tgt)} · ${pct.toFixed(0)}% to pass`; }
   else { const inLvl = Math.max(0, net) % 250; pct = net <= 0 ? 0 : inLvl / 250 * 100; label = net > 0 ? `${Math.round(inLvl)} / 250 XP → LV ${lvl + 1}` : 'No profit yet'; }
   const cleared = tgt > 0 && net >= tgt;
-  return `<div class="pcard ${net > 0 ? 'up' : net < 0 ? 'down' : ''}${cleared ? ' cleared' : ''}">
-    <div class="pc-top"><div class="pc-id"><b>${esc(a.name || 'Unnamed')}</b><span>${esc(a.firm || '')}${a.kind ? ' · ' + esc(a.kind) : ''}</span></div><div class="lv">LV<b>${lvl}</b></div></div>
-    <div class="pc-rank">${cleared ? '✅ Target cleared' : rankOf(net)}</div>
+  const rk = rankOf(net);
+  return `<div class="pcard ${net > 0 ? 'up' : net < 0 ? 'down' : ''}${cleared ? ' cleared' : ''} rank-${rk.toLowerCase()}">
+    <div class="pc-top"><div class="pc-ava" aria-hidden="true">${chibi(cleared ? 'Legend' : rk)}</div><div class="pc-id"><b>${esc(a.name || 'Unnamed')}</b><span>${esc(a.firm || '')}${a.kind ? ' · ' + esc(a.kind) : ''}</span></div><div class="lv">LV<b>${lvl}</b></div></div>
+    <div class="pc-rank">${cleared ? '✅ Target cleared' : rk}</div>
     <div class="pc-net ${cls(net)}">${s.n ? money(net) : '—'}</div>
     <div class="xpwrap"><div class="xpbar" style="width:${pct}%"></div></div>
     <div class="xplabel">${s.n ? label : 'No trades yet'}</div>
