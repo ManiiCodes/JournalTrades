@@ -28,6 +28,7 @@
     <button role="tab" data-tab="log" aria-selected="true">Log a trade</button>
     <button role="tab" data-tab="journal" aria-selected="false">Journal <span class="badge review" id="reviewCount" hidden></span></button>
     <button role="tab" data-tab="stats" aria-selected="false">Stats</button>
+    <button role="tab" data-tab="standings" aria-selected="false">Standings</button>
     <button role="tab" data-tab="accounts" aria-selected="false">Accounts &amp; Tradovate</button>
   </nav>
 
@@ -173,6 +174,12 @@
         <h2 style="margin-top:14px">Costliest mistakes</h2><table class="cmp" id="mistakeTbl"></table></div>
     </div>
     <div class="sheet"><h2>By state of mind</h2><p class="note" style="margin-top:0">Win rate and net P&amp;L when each feeling showed up in a trade — your emotions linked to results.</p><table class="cmp" id="emotionTbl"></table></div>
+  </section>
+
+  <!-- STANDINGS -->
+  <section class="panel" id="tab-standings">
+    <p class="note" style="margin-top:0">Where each account stands, powered by your logged trades. Bank profit to level up; set a profit target per account on the Accounts tab to track your % to pass.</p>
+    <div id="standings"></div>
   </section>
 
   <!-- ACCOUNTS -->

@@ -425,6 +425,7 @@ function renderAccounts() {
     <label>Name ${x.linked ? `<span class="badge">Tradovate ${x.env === 'demo' ? 'prop/sim' : 'live'}</span>` : ''}<input data-k="name" value="${esc(x.name)}" placeholder="e.g. Tradeify 25K #1" maxlength="80"></label>
     <label>Firm<select data-k="firm">${firms.map(f => `<option ${f === x.firm ? 'selected' : ''}>${esc(f)}</option>`).join('')}</select></label>
     <label>Type<select data-k="kind">${kinds.map(f => `<option value="${esc(f)}" ${f === x.kind ? 'selected' : ''}>${f ? esc(f) : 'Not set'}</option>`).join('')}</select></label>
+    <label>Profit target<input type="number" min="0" step="50" data-tgt="${esc(x.id)}" value="${state.settings.targets?.[x.id] ?? ''}" placeholder="e.g. 1500"></label>
     <button class="btn danger small" data-del="1" type="button">Remove</button></div>`).join('') : '<p class="empty">No accounts yet.</p>';
   $('feeGrid').innerHTML = Object.keys(INSTR).slice(0, 8).map(k => `<label>${k} per contract<input type="number" step="0.01" min="0" data-fee="${k}" value="${state.settings.fees?.[k] ?? 0}"></label>`).join('');
   $('defInstr').value = state.settings.defaultInstr || 'NQ';
@@ -432,7 +433,16 @@ function renderAccounts() {
   $('tzSel').value = tz(); $('theme').value = state.settings.theme || '';
 }
 $('acctList').addEventListener('change', async e => {
-  const row = e.target.closest('.acct'); if (!row || !e.target.dataset.k) return;
+  const row = e.target.closest('.acct'); if (!row) return;
+  if (e.target.dataset.tgt) {
+    const targets = { ...(state.settings.targets || {}) };
+    const v = e.target.value.trim();
+    if (v === '') delete targets[e.target.dataset.tgt]; else targets[e.target.dataset.tgt] = Math.max(0, +v || 0);
+    try { await api('/api/settings', { method: 'PUT', body: { targets } }); state.settings.targets = targets; toast('Target saved'); }
+    catch (err) { toast(err.message); }
+    return;
+  }
+  if (!e.target.dataset.k) return;
   const body = {}; row.querySelectorAll('[data-k]').forEach(i => (body[i.dataset.k] = i.value));
   try { await api(`/api/accounts/${row.dataset.id}`, { method: 'PUT', body }); const a = state.accounts.find(x => x.id === row.dataset.id); Object.assign(a, body); toast('Account saved'); refreshAccountSelects(); }
   catch (err) { toast(err.message); }
@@ -473,11 +483,52 @@ $('exportBtn').onclick = () => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
+/* ---------- standings ---------- */
+function acctStanding(acctId) {
+  const td = todayISO();
+  let net = 0, today = 0, wins = 0, n = 0;
+  state.trades.filter(t => tradeAccts(t).includes(acctId)).forEach(t => {
+    const c = calc(t, acctId); if (!c) return;
+    net += c.net; n++; if (c.net > 0) wins++; if (t.date === td) today += c.net;
+  });
+  return { net, today, n, wr: n ? wins / n : 0 };
+}
+const RANKS = [[5000, 'Legend'], [2500, 'Elite'], [1000, 'Veteran'], [500, 'Warrior'], [1, 'Fighter'], [-1e12, 'Rookie']];
+const rankOf = net => (RANKS.find(([t]) => net >= t) || RANKS[RANKS.length - 1])[1];
+function standCard(a) {
+  const s = acctStanding(a.id), net = s.net;
+  const lvl = Math.max(1, Math.floor(Math.max(0, net) / 250) + 1);
+  const tgt = +(state.settings.targets?.[a.id]) || 0;
+  let pct, label;
+  if (tgt > 0) { pct = Math.max(0, Math.min(100, net / tgt * 100)); label = `${money(net)} / ${money(tgt)} · ${pct.toFixed(0)}% to pass`; }
+  else { const inLvl = Math.max(0, net) % 250; pct = net <= 0 ? 0 : inLvl / 250 * 100; label = net > 0 ? `${Math.round(inLvl)} / 250 XP → LV ${lvl + 1}` : 'No profit yet'; }
+  const cleared = tgt > 0 && net >= tgt;
+  return `<div class="pcard ${net > 0 ? 'up' : net < 0 ? 'down' : ''}${cleared ? ' cleared' : ''}">
+    <div class="pc-top"><div class="pc-id"><b>${esc(a.name || 'Unnamed')}</b><span>${esc(a.firm || '')}${a.kind ? ' · ' + esc(a.kind) : ''}</span></div><div class="lv">LV<b>${lvl}</b></div></div>
+    <div class="pc-rank">${cleared ? '✅ Target cleared' : rankOf(net)}</div>
+    <div class="pc-net ${cls(net)}">${s.n ? money(net) : '—'}</div>
+    <div class="xpwrap"><div class="xpbar" style="width:${pct}%"></div></div>
+    <div class="xplabel">${s.n ? label : 'No trades yet'}</div>
+    <div class="pc-foot"><span>Today<b class="${cls(s.today)}">${s.n ? money(s.today) : '—'}</b></span><span>Win<b>${s.n ? (s.wr * 100).toFixed(0) + '%' : '—'}</b></span><span>Trades<b>${s.n}</b></span></div>
+  </div>`;
+}
+function renderStandings() {
+  const groups = [['Eval', '⚔️ Evals'], ['Funded', '🏆 Funded'], ['Live', '💹 Live'], ['', '🎯 Unsorted']];
+  let html = '';
+  for (const [kind, title] of groups) {
+    const accts = state.accounts.filter(a => (a.kind || '') === kind);
+    if (!accts.length) continue;
+    const tot = accts.reduce((sum, a) => sum + acctStanding(a.id).net, 0);
+    html += `<div class="sect"><h2>${title} <span class="sect-n">${accts.length}</span></h2><span class="sect-tot ${cls(tot)}">${money(tot)}</span></div><div class="pgrid">${accts.map(standCard).join('')}</div>`;
+  }
+  $('standings').innerHTML = html || '<p class="empty">No accounts yet. Add them on the Accounts &amp; Tradovate tab.</p>';
+}
+
 /* ---------- tabs & boot ---------- */
 function showTab(name) {
   document.querySelectorAll('nav button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === name));
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === 'tab-' + name));
-  if (name === 'stats') renderStats(); if (name === 'journal') renderJournal(); if (name === 'accounts') { renderAccounts(); renderConnections(); }
+  if (name === 'stats') renderStats(); if (name === 'journal') renderJournal(); if (name === 'standings') renderStandings(); if (name === 'accounts') { renderAccounts(); renderConnections(); }
 }
 document.querySelector('nav').addEventListener('click', e => { const b = e.target.closest('button'); if (b) showTab(b.dataset.tab); });
 ['j_acct', 'j_show', 'j_from', 'j_to'].forEach(id => $(id).addEventListener('input', renderJournal));
@@ -490,6 +541,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { 
 function renderAll() {
   applyTheme(); refreshAccountSelects(); renderPulse(); renderJournal(); renderConnections();
   if ($('tab-stats').classList.contains('on')) renderStats();
+  if ($('tab-standings').classList.contains('on')) renderStandings();
   if ($('tab-accounts').classList.contains('on')) renderAccounts();
   if (editing) { const t = currentTrade(); if (!t) fillForm(null); }
   preview();
