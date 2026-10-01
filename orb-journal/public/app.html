@@ -94,7 +94,11 @@
         <div class="chips" id="f_mistakes"></div>
 
         <h3>State of mind</h3>
-        <div class="chips" id="f_emotion"></div>
+        <div class="emo-grid">
+          <div class="emo-phase"><span class="emo-lab">At entry</span><div class="chips" id="f_emoEntry"></div></div>
+          <div class="emo-phase"><span class="emo-lab">During</span><div class="chips" id="f_emoDuring"></div></div>
+          <div class="emo-phase"><span class="emo-lab">At exit</span><div class="chips" id="f_emoExit"></div></div>
+        </div>
 
         <h3>Notes</h3>
         <div class="grid" style="grid-template-columns:1fr">
@@ -168,6 +172,7 @@
       <div class="sheet"><h2>By weekday</h2><svg id="dow" viewBox="0 0 600 200" role="img" aria-label="Net P&L by weekday"></svg>
         <h2 style="margin-top:14px">Costliest mistakes</h2><table class="cmp" id="mistakeTbl"></table></div>
     </div>
+    <div class="sheet"><h2>By state of mind</h2><p class="note" style="margin-top:0">Win rate and net P&amp;L when each feeling showed up in a trade — your emotions linked to results.</p><table class="cmp" id="emotionTbl"></table></div>
   </section>
 
   <!-- ACCOUNTS -->

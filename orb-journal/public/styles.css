@@ -130,3 +130,6 @@ html,body{height:100%}
 .formerr{color:var(--loss);font-size:14px;min-height:1.2em;margin:0}
 nav .badge.review{background:var(--or);border-color:var(--or);color:#fff;margin-left:4px}
 label .badge{align-self:flex-start}
+.emo-grid{display:flex;flex-direction:column;gap:9px}
+.emo-phase{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.emo-lab{font-size:12px;font-weight:600;color:var(--muted);min-width:62px}

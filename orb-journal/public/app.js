@@ -71,15 +71,17 @@ const tradeAccts = t => (t.legs && t.legs.length ? [...new Set(t.legs.map(l => l
 const needsReview = t => (t.legs && t.legs.length) && !t.reviewed;
 
 /* ---------- form ---------- */
-const form = { side: 'long', grade: '', accts: [], mistakes: [], emotion: [] };
+const form = { side: 'long', grade: '', accts: [], mistakes: [], emoEntry: [], emoDuring: [], emoExit: [] };
 function buildForm() {
   const opts = Object.entries(INSTR).map(([k, v]) => `<option value="${k}">${v.name}</option>`).join('');
   $('f_instr').innerHTML = opts; $('defInstr').innerHTML = opts;
   $('tzSel').innerHTML = TIMEZONES.map(z => `<option>${z}</option>`).join('');
   $('f_mistakes').innerHTML = MISTAKES.map(m => `<button type="button" class="chip bad" data-v="${esc(m)}">${esc(m)}</button>`).join('');
-  $('f_emotion').innerHTML = EMOTIONS.map(m => `<button type="button" class="chip" data-v="${esc(m)}">${esc(m)}</button>`).join('');
+  const emoChips = EMOTIONS.map(m => `<button type="button" class="chip" data-v="${esc(m)}">${esc(m)}</button>`).join('');
+  $('f_emoEntry').innerHTML = emoChips; $('f_emoDuring').innerHTML = emoChips; $('f_emoExit').innerHTML = emoChips;
   seg('f_side', 'side'); seg('f_grade', 'grade', true);
-  chipGroup('f_mistakes', 'mistakes'); chipGroup('f_emotion', 'emotion'); chipGroup('f_accts', 'accts');
+  chipGroup('f_mistakes', 'mistakes'); chipGroup('f_accts', 'accts');
+  chipGroup('f_emoEntry', 'emoEntry'); chipGroup('f_emoDuring', 'emoDuring'); chipGroup('f_emoExit', 'emoExit');
   document.querySelectorAll('#tradeForm input,#tradeForm select').forEach(el => el.addEventListener('input', preview));
   $('tradeForm').addEventListener('submit', e => { e.preventDefault(); saveTrade(); });
   $('resetBtn').onclick = () => fillForm(null); $('deleteBtn').onclick = deleteTrade;
@@ -110,7 +112,9 @@ function readForm() {
   return { date: $('f_date').value, time: $('f_time').value, instr: $('f_instr').value, qty: Math.max(1, parseInt($('f_qty').value) || 1),
     side: form.side, orh: num($('f_orh').value), orl: num($('f_orl').value), entry: num($('f_entry').value), stop: num($('f_stop').value),
     target: num($('f_target').value), exit: num($('f_exit').value), c15: $('f_c15').checked, c5: $('f_c5').checked, c1: $('f_c1').checked,
-    plan: $('f_plan').checked, grade: form.grade, accts: [...form.accts], mistakes: [...form.mistakes], emotion: [...form.emotion],
+    plan: $('f_plan').checked, grade: form.grade, accts: [...form.accts], mistakes: [...form.mistakes],
+    emoEntry: [...form.emoEntry], emoDuring: [...form.emoDuring], emoExit: [...form.emoExit],
+    emotion: [...new Set([...form.emoEntry, ...form.emoDuring, ...form.emoExit])],
     notes: $('f_notes').value.trim(), link: $('f_link').value.trim() };
 }
 function fillForm(t) {
@@ -124,7 +128,9 @@ function fillForm(t) {
   ['orh', 'orl', 'entry', 'stop', 'target', 'exit'].forEach(k => ($('f_' + k).value = t?.[k] ?? ''));
   ['c15', 'c5', 'c1', 'plan'].forEach(k => ($('f_' + k).checked = !!t?.[k]));
   $('f_notes').value = t?.notes || ''; $('f_link').value = t?.link || '';
-  Object.assign(form, { side: t?.side || 'long', grade: t?.grade || '', accts: [...(t?.accts || [])], mistakes: [...(t?.mistakes || [])], emotion: [...(t?.emotion || [])] });
+  const ph = { e: [...(t?.emoEntry || [])], d: [...(t?.emoDuring || [])], x: [...(t?.emoExit || [])] };
+  if (!ph.e.length && !ph.d.length && !ph.x.length && t?.emotion?.length) ph.d = [...t.emotion]; // older trades: show saved mood under "During"
+  Object.assign(form, { side: t?.side || 'long', grade: t?.grade || '', accts: [...(t?.accts || [])], mistakes: [...(t?.mistakes || [])], emoEntry: ph.e, emoDuring: ph.d, emoExit: ph.x });
   ['f_date', 'f_time', 'f_instr', 'f_qty', 'f_entry', 'f_exit'].forEach(id => ($(id).disabled = synced));
   $('f_side').querySelectorAll('button').forEach(b => (b.disabled = synced));
   $('acctBlock').hidden = synced; $('fillsBox').hidden = !synced;
@@ -133,7 +139,8 @@ function fillForm(t) {
       <td class="num">${l.entry}</td><td class="num">${l.exit}</td><td class="num">${money(l.fees)}</td><td class="num ${cls(l.gross - l.fees)}">${money(l.gross - l.fees)}</td></tr>`).join('');
   }
   paintSeg('f_side', form.side); paintSeg('f_grade', form.grade);
-  renderAcctChips(); paintChips('f_mistakes', form.mistakes); paintChips('f_emotion', form.emotion); preview();
+  renderAcctChips(); paintChips('f_mistakes', form.mistakes);
+  paintChips('f_emoEntry', form.emoEntry); paintChips('f_emoDuring', form.emoDuring); paintChips('f_emoExit', form.emoExit); preview();
 }
 async function saveTrade() {
   const t = readForm();
@@ -263,7 +270,7 @@ function renderStats() {
     k('Max drawdown', money(dd), 'peak-to-trough, end of day', dd < 0 ? 'neg' : ''),
     k('Best day share', totalGreen ? ((best / totalGreen) * 100).toFixed(0) + '%' : '–', "best day ÷ all green days; compare to your firm's consistency rule"),
   ].join('') : '<div class="kpi" style="grid-column:1/-1"><span>No trades in this range yet.</span></div>';
-  drawEquity(days, D); drawCal(D); drawEdge(ts); drawDow(ts); drawMistakes(ts);
+  drawEquity(days, D); drawCal(D); drawEdge(ts); drawDow(ts); drawMistakes(ts); drawEmotions(ts);
 }
 function drawEquity(days, D) {
   const svg = $('equity'), W = 600, H = 220, p = 44, css = getComputedStyle(document.documentElement), col = n => css.getPropertyValue(n).trim();
@@ -319,6 +326,14 @@ function drawMistakes(ts) {
   const r = Object.entries(m).sort((a, b) => a[1].p - b[1].p);
   $('mistakeTbl').innerHTML = r.length ? '<tr><th></th><th class="num">Times</th><th class="num">Net on those trades</th></tr>' +
     r.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="num">${v.n}</td><td class="num ${cls(v.p)}">${money(v.p)}</td></tr>`).join('') : '<tr><td class="empty">No mistakes tagged in this range.</td></tr>';
+}
+function drawEmotions(ts) {
+  const m = {};
+  ts.forEach(t => (t.emotion || []).forEach(x => { (m[x] = m[x] || []).push(t); }));
+  const rows = Object.entries(m).map(([k, arr]) => [k, summarize(arr)]).sort((a, b) => b[1].net - a[1].net);
+  $('emotionTbl').innerHTML = rows.length ? '<tr><th></th><th class="num">Trades</th><th class="num">Win</th><th class="num">Per trade</th><th class="num">Net</th></tr>' +
+    rows.map(([k, s]) => `<tr><td>${esc(k)}</td><td class="num">${s.n}</td><td class="num">${(s.wr * 100).toFixed(0)}%</td><td class="num ${cls(s.exp)}">${money(s.exp)}</td><td class="num ${cls(s.net)}">${money(s.net)}</td></tr>`).join('')
+    : '<tr><td class="empty">Tag how you felt on trades to see which emotions pay.</td></tr>';
 }
 
 /* ---------- header ---------- */
